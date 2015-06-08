@@ -28,9 +28,9 @@ def search(query='*:*'):
     '''
 
     if isinstance(query,str): 
-        query = { 'q' : query }	
+        query = { 'q' : query }
     else:
-        if not query.has_key('q'): query['q'] = '*:*' #make sure we include a 'q' parameter
+        if 'q' not in query: query['q'] = '*:*' #make sure we include a 'q' parameter
     query['wt'] = 'json' #make sure the return type is json
     query['fq'] = quote('doc_type:full AND !article_type_facet:"Issue Image"') #search only for articles
     query['api_key'] = '7Jne3TIPu6DqFCK' #TODO: This is the PLoS Example API Key. You need to substitute this key value for your own PLoS API key. If you do not have a PLoS API Key, please register for a key at http://api.plos.org/registration/
