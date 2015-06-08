@@ -1,5 +1,5 @@
 import json
-from urllib2 import urlopen, quote
+from urllib.request import urlopen, quote
 from datetime import datetime, timedelta
 
 searchUrl = 'http://api.plos.org/search?'
@@ -59,8 +59,8 @@ def authorSearch(author='Michael B Eisen', strict=True, limit=10):
     query['fl'] = 'id,journal,title' #specify the fields we need returned
     query['rows'] = limit
     results = search(query)
-    print 'Articles by %s:' %(author)
-    print '*'*10
+    print('Articles by %s:' %(author))
+    print('*'*10)
 
     for doc in results:
         print('%s) %s (%s)' % (results.index(doc)+1,doc.get('title'),formatArticleUrl(doc.get('id'),doc.get('journal'))))
