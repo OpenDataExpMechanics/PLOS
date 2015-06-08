@@ -1,6 +1,9 @@
 import json
-from urllib.request import urlopen, quote
+from urllib.request import urlopen
+from urllib.parse import quote
 from datetime import datetime, timedelta
+import requests
+from bs4 import BeautifulSoup
 
 searchUrl = 'http://api.plos.org/search?'
 journalUrls = {'PLoS Biology' : 'http://www.plosbiology.org',
@@ -10,6 +13,13 @@ journalUrls = {'PLoS Biology' : 'http://www.plosbiology.org',
                'PLoS ONE' : 'http://www.plosone.org',
                'PLoS Neglected Tropical Diseases' : 'http://www.plosntds.org',
                'PLoS Pathogens' : 'http://www.plospathogens.org'}
+api_key = '&api_key={UnppqeqPjpZEH7nEqkRd}'
+
+def titleSearch(title="Ten Simple Rules"):
+    '''
+    args:  title - string note: use double quotes
+    '''
+    return searchUrl + 'q=title:' + title + api_key
 
 def formatArticleUrl(doi,journal):
     '''
@@ -33,15 +43,31 @@ def search(query='*:*'):
         if 'q' not in query: query['q'] = '*:*' #make sure we include a 'q' parameter
     query['wt'] = 'json' #make sure the return type is json
     query['fq'] = quote('doc_type:full AND !article_type_facet:"Issue Image"') #search only for articles
-    query['api_key'] = '7Jne3TIPu6DqFCK' #TODO: This is the PLoS Example API Key. You need to substitute this key value for your own PLoS API key. If you do not have a PLoS API Key, please register for a key at http://api.plos.org/registration/
+    query['api_key'] = 'UnppqeqPjpZEH7nEqkRd' # You need to substitute this key value for your own PLoS API key. If you do not have a PLoS API Key, please register for a key at http://api.plos.org/registration/
     
     url = searchUrl;
 
     for part in query:
         url += '%s%s=%s' % ('&' if url is not searchUrl else '',part,query[part])
     print('Making request to',url) #TEST
-
-    return json.load(urlopen(url))['response']['docs']
+    r = requests.get(url)
+    soup=BeautifulSoup(r.text)
+    docs = soup.findAll('doc') 
+    # generate dictionary { docs ('title' : ,'doi': , 'journal': , 'authors': }}
+    mydict = {}
+    for i in range(0,len(docs)):
+        if docs[i].find('arr',{'name':'author_display'}) == None: continue
+        else: 
+            mydict.setdefault(i,{})
+            mydict[i] = {'title':docs[i].find('str',{'name':'title_display'})[i].string,
+                         'doi': docs[i].find('str', {'name' : 'id'}).string,
+                         'journal': docs[i].find('str',{'name' :'journal'}).string,
+                         'date': docs[i].find('date').string,
+                         'second_auth': docs[i].find('arr',{'name':'author_display'}).str.string
+                         }
+        
+        
+    return mydict
 
 def authorSearch(author='Michael B Eisen', strict=True, limit=10):
     '''
@@ -61,9 +87,9 @@ def authorSearch(author='Michael B Eisen', strict=True, limit=10):
     results = search(query)
     print('Articles by %s:' %(author))
     print('*'*10)
-
+    i=0
     for doc in results:
-        print('%s) %s (%s)' % (results.index(doc)+1,doc.get('title'),formatArticleUrl(doc.get('id'),doc.get('journal'))))
+        print('(%s) %s (%s)' % (i+1,results[doc]['title'],formatArticleUrl(results[doc]['doi'],results[doc]['journal'])))
 
 def authorViews(author='Michael B Eisen'):
     '''
@@ -76,7 +102,7 @@ def authorViews(author='Michael B Eisen'):
                      })
     views = 0
     for doc in results:
-        views += doc.get('counter_total_all')	
+        views += doc.get('counter_total_all')
     print('%s has %s all time views on PLoS!' % (author,views))
 
 def graphPubs(start,end,out='publications.csv',query=None):
